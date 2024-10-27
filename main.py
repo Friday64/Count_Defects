@@ -10,7 +10,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen
 
-class CounterApp(App):
+class Defect_CounterApp(App):
     def build(self):
         self.layout = GridLayout(cols=2, rows=14, padding=10, spacing=10)
         self.selected_index = 0  # Initialize selected defect index
@@ -134,5 +134,5 @@ class CounterApp(App):
         super().stop(*args, **args)
 
 if __name__ == '__main__':
-    app = CounterApp()
+    app = Defect_CounterApp()
     app.start_window()
