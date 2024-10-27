@@ -10,6 +10,9 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen
+import schedule
+import time
+import threading
 
 class Defect_CounterApp(App):
     def build(self):
@@ -47,6 +50,8 @@ class Defect_CounterApp(App):
         reset_button.bind(on_release=self.reset_counts)
         self.layout.add_widget(reset_button)
 
+        self.schedule_save_counts()
+
         return self.layout
 
     def check_csv(self):
@@ -58,7 +63,7 @@ class Defect_CounterApp(App):
                 with open('counts.csv', 'w', newline='') as file:
                     writer = csv.writer(file)
                     # Write initial counts (all zeros)
-                    writer.writerow([0] * len(self.defect_data)) 
+                    writer.writerow([0] * len(self.defect_data))
                 print("Created counts.csv file.")
             except Exception as e:
                 print(f"Error creating counts.csv: {e}")
@@ -70,7 +75,7 @@ class Defect_CounterApp(App):
         try:
             with open('counts.csv', 'r') as file:
                 reader = csv.reader(file)
-                row = next(reader, None)  # Read the first (and only) row, or None if file is empty
+                row = next(reader, None)
                 if row is None:
                     # If file is empty, set counts to 0
                     for data in self.defect_data:
@@ -78,45 +83,48 @@ class Defect_CounterApp(App):
                 else:
                     # If file is not empty, load counts from file
                     for i, count in enumerate(row):
-                        if i < len(self.defect_data):  # Ensure we don't go out of bounds
+                        if i < len(self.defect_data):
                             self.defect_data[i]['count'] = int(count)
-        except FileNotFoundError:
-            # If file doesn't exist, set counts to 0
-            for data in self.defect_data:
-                data['count'] = 0
         except Exception as e:
             print(f"Error loading counts: {e}")
 
-    def increment_count(self, index):
-        """
-        Increments the count for the selected defect type.
-        """
-        if 'count' not in self.defect_data[index]:
-            self.defect_data[index]['count'] = 0
-        self.defect_data[index]['count'] += 1
-        self.defect_data[index]['label'].text = str(self.defect_data[index]['count'])
-        self.save_counts()
+    def schedule_save_counts(self):
+        schedule.every(30).seconds.do(self.save_counts)  # Save every 30 seconds
+        threading.Thread(target=self.run_schedule).start()
 
-    def reset_counts(self, instance):
-        """
-        Resets all defect counts to zero.
-        """
-        for data in self.defect_data:
-            data['count'] = 0
-            data['label'].text = str(data['count'])
-        self.save_counts()
+    def run_schedule(self):
+        while True:
+            schedule.run_pending()
+            time.sleep(1)  # Simulate some work
 
     def save_counts(self):
         """
-        Saves the defect counts to a CSV file.
+        Saves defect counts to a CSV file.
         """
         try:
             with open('counts.csv', 'w', newline='') as file:
                 writer = csv.writer(file)
                 # Write counts to file
                 writer.writerow([data['count'] for data in self.defect_data])
+            print("Saved counts to counts.csv file.")
         except Exception as e:
             print(f"Error saving counts: {e}")
+
+    def increment_count(self, index):
+        """
+        Increments the count of a defect.
+        """
+        self.defect_data[index]['count'] += 1
+        self.defect_data[index]['label'].text = str(self.defect_data[index]['count'])
+
+    def reset_counts(self, instance):
+        """
+        Resets all defect counts to 0.
+        """
+        for data in self.defect_data:
+            data['count'] = 0
+            data['label'].text = '0'
+        self.save_counts()
 
 if __name__ == '__main__':
     Defect_CounterApp().run()
