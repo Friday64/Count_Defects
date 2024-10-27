@@ -1,23 +1,14 @@
 import csv
 import os
-from typing import Self
 from kivy.app import App
-from kivy.uix.popup import Popup
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
-from kivy.uix.boxlayout import BoxLayout
-from kivy.core.window import Window
-from kivy.uix.screenmanager import ScreenManager, Screen
-import schedule
-import time
-import threading
+from kivy.clock import Clock
 
 class Defect_CounterApp(App):
     def build(self):
-        self.layout = GridLayout(cols=2, rows=14, padding=10, spacing=10)
-        self.selected_index = 0  # Initialize selected defect index
+        self.layout = GridLayout(cols=2, rows=14, padding=10, spacing=10) 
         self.defect_data = [
             {'name': 'Defective Solder'},
             {'name': 'Missing Components'},
@@ -38,11 +29,10 @@ class Defect_CounterApp(App):
 
         for i, data in enumerate(self.defect_data):
             btn = Button(text=data['name'], size_hint_y=None, height=44)
-            # Capture the correct index using a default argument in the lambda function
-            btn.bind(on_release=lambda btn, index=i: self.increment_count(index))  
+            btn.bind(on_release=lambda btn, index=i: self.increment_count(index))
             self.layout.add_widget(btn)
-            if 'count' not in data:
-                data['count'] = 0
+
+            data['count'] = data.get('count', 0)  # Simplified count initialization
             data['label'] = Label(text=str(data['count']), size_hint_y=None, height=44)
             self.layout.add_widget(data['label'])
 
@@ -50,7 +40,7 @@ class Defect_CounterApp(App):
         reset_button.bind(on_release=self.reset_counts)
         self.layout.add_widget(reset_button)
 
-        self.schedule_save_counts()
+        Clock.schedule_interval(self.save_counts, 30)  # Schedule save_counts every 30 seconds
 
         return self.layout
 
@@ -62,7 +52,6 @@ class Defect_CounterApp(App):
             try:
                 with open('counts.csv', 'w', newline='') as file:
                     writer = csv.writer(file)
-                    # Write initial counts (all zeros)
                     writer.writerow([0] * len(self.defect_data))
                 print("Created counts.csv file.")
             except Exception as e:
@@ -75,36 +64,19 @@ class Defect_CounterApp(App):
         try:
             with open('counts.csv', 'r') as file:
                 reader = csv.reader(file)
-                row = next(reader, None)
-                if row is None:
-                    # If file is empty, set counts to 0
-                    for data in self.defect_data:
-                        data['count'] = 0
-                else:
-                    # If file is not empty, load counts from file
-                    for i, count in enumerate(row):
-                        if i < len(self.defect_data):
-                            self.defect_data[i]['count'] = int(count)
+                row = next(reader, None)  # Get first row or None if file is empty
+                for i, data in enumerate(self.defect_data):
+                    data['count'] = int(row[i]) if row else 0  # Simplified count loading
         except Exception as e:
             print(f"Error loading counts: {e}")
 
-    def schedule_save_counts(self):
-        schedule.every(30).seconds.do(self.save_counts)  # Save every 30 seconds
-        threading.Thread(target=self.run_schedule).start()
-
-    def run_schedule(self):
-        while True:
-            schedule.run_pending()
-            time.sleep(1)  # Simulate some work
-
-    def save_counts(self):
+    def save_counts(self, dt):  # Add dt argument for Kivy Clock
         """
         Saves defect counts to a CSV file.
         """
         try:
             with open('counts.csv', 'w', newline='') as file:
                 writer = csv.writer(file)
-                # Write counts to file
                 writer.writerow([data['count'] for data in self.defect_data])
             print("Saved counts to counts.csv file.")
         except Exception as e:
@@ -124,7 +96,7 @@ class Defect_CounterApp(App):
         for data in self.defect_data:
             data['count'] = 0
             data['label'].text = '0'
-        self.save_counts()
+        self.save_counts(None)  # Pass None for dt when called manually
 
 if __name__ == '__main__':
     Defect_CounterApp().run()
