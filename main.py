@@ -89,6 +89,8 @@ class Defect_CounterApp(App):
         self.defect_data[index]['count'] += 1
         self.defect_data[index]['label'].text = str(self.defect_data[index]['count'])
 
+        #Save the updated count to the CSV file
+        self.save_counts(None)  # Pass None for dt when called manually
     def reset_counts(self, instance):
         """
         Resets all defect counts to 0.
@@ -97,6 +99,12 @@ class Defect_CounterApp(App):
             data['count'] = 0
             data['label'].text = '0'
         self.save_counts(None)  # Pass None for dt when called manually
+
+    #function to save the counts to the CSV file on when x is pressed
+    def on_pause(self):
+        self.save_counts(None)  # Pass None for dt when called manually
+        return True
+    
 
 if __name__ == '__main__':
     Defect_CounterApp().run()
