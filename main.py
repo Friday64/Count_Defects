@@ -1,11 +1,14 @@
 import csv
 import os
-
 from kivy.app import App
+from kivy.uix.popup import Popup
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.uix.dropdown import DropDown
+from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.uix.boxlayout import BoxLayout
+from kivy.core.window import Window
+from kivy.uix.screenmanager import ScreenManager, Screen
 
 class CounterApp(App):
     def build(self):
@@ -27,14 +30,6 @@ class CounterApp(App):
             {'name': 'Wiring Defects', 'count': 0}
         ]
 
-        self.layout.add_widget(Label())  
-        self.dropdown = DropDown()
-        self.dropdown.bind(on_select=lambda instance, x: setattr(self.mainbutton, 'text', x))
-
-        self.mainbutton = Button(text='Select Defect category to reset', background_color=(1, 0, 0, 1), color=(0, 0, 0, 1))
-        self.mainbutton.bind(on_release=self.dropdown.open)
-        self.layout.add_widget(self.mainbutton)  
-
         # Create buttons and labels, and store label references
         for i, data in enumerate(self.defect_data):
             btn = Button(text=data['name'], size_hint_y=None, height=44)
@@ -44,10 +39,6 @@ class CounterApp(App):
             data['label'] = Label(text=str(data['count']), size_hint_y=None, height=44)
             self.layout.add_widget(data['label'])
 
-        for i, data in enumerate(self.defect_data):
-            btn = Button(text=data['name'], size_hint_y=None, height=44)
-            btn.bind(on_release=lambda btn, index=i: self.select_button(index))
-            self.dropdown.add_widget(btn)
 
         reset_button = Button(text='Reset Counts')
         reset_button.bind(on_release=self.reset_counts)
@@ -79,24 +70,29 @@ class CounterApp(App):
         self.defect_data[index]['label'].text = str(self.defect_data[index]['count'])
         self.save_counts()
 
-    def select_button(self, index):
+    def reset_all_counts(self, instance):
+        """  when Reset Counts is clicked, opens a window with yes or no buttons, then reset
+            the counts and only reset all counts if user confirms yes on the dialog window button, if no is clicked, closes the window and do nothing
         """
-        Updates the selected defect type from the dropdown.
-        """
-        print(f"Selected index: {index}")  # Print the selected index for debugging
-        self.selected_index = index
-        self.mainbutton.text = self.defect_data[index]['name']
-        self.dropdown.dismiss()
+        popup = Popup(title='Reset All Counts', content=Label(text='Are you sure you want to reset all counts?'),
+                      size_hint=(None, None), size=(400, 200))
+        popup.open()
+        yes = Button(text='Yes')
+        no = Button(text='No')
+        yes.bind(on_press=lambda instance: self.reset_counts(instance))
+        no.bind(on_press=lambda instance: popup.dismiss())
+        popup.content.add_widget(yes)
+        popup.content.add_widget(no)
 
     def reset_counts(self, instance):
         """
-        Resets the defect counts to zero.
+        Resets all defect counts to zero.
         """
         for data in self.defect_data:
             data['count'] = 0
             data['label'].text = str(data['count'])
         self.save_counts()
-
+       
     def save_counts(self):
         """
         Saves the defect counts to a CSV file.
